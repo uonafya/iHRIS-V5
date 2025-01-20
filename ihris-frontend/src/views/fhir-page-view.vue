@@ -1,5 +1,5 @@
 <template>
-  <ihris-template :key="$route.path">
+  <ihris-template @templates-loaded="templatesLoaded" :key="$route.path">
     Loading...
   </ihris-template>
 </template>
@@ -8,20 +8,40 @@
 // @ is an alias to /src
 
 var pageId
+var pageVersion
 var page
+var showDrawer = false
 var isEdit
 import Vue from 'vue'
 
 export default {
   name: "fhir-page-view",
+  props: ["id", "version", "page", "show-drawer"],
   data: function() {
     return {
     }
   },
   created: function() {
+    if(!pageId && this.id) {
+      pageId = this.id
+    }
+    if(!pageVersion && this.version) {
+      pageVersion = this.version
+    }
+    if(!page && this.page) {
+      page = this.page
+    }
+    if(showDrawer == undefined && this.showDrawer != undefined) {
+      showDrawer = this.showDrawer
+    } else {
+      showDrawer = true
+    }
     this.getTemplate()
   },
   methods: {
+    templatesLoaded() {
+      this.$emit("templates-loaded")
+    },
     getTemplate: function() {
       fetch( "/config/page/"+page ).then(response => {
         response.json().then(data => {
@@ -44,6 +64,8 @@ export default {
               data: function() {
                 return {
                   fhirId: pageId,
+                  fhirVersion: pageVersion,
+                  showDrawer: showDrawer,
                   isEdit: isEdit,
                   sectionMenu: data.data.sectionMenu,
                   subFields: data.data.subFields,
@@ -53,6 +75,9 @@ export default {
                   mounts: data.data.mounts,
                   constraints: data.data.constraints
                 }
+              },
+              created() {
+                this.$emit("templates-loaded")
               },
               components: {
                 "ihris-practitioner-intro": () => import(/* webpackChunkName: "fhir-primary" */ "@/components/ihris/ihris-practitioner-intro" ),
@@ -108,6 +133,8 @@ export default {
   },
   beforeCreate: function() {
     pageId = this.$route.params.id
+    pageVersion = this.$route.query.version
+    showDrawer = this.$route.query.showDrawer
     page = this.$route.params.page
     isEdit = this.$route.query.edit
     Vue.component('ihris-template', { template: '<div>Loading...</div>' } )
